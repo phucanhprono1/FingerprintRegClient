@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -21,10 +22,13 @@ import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -32,6 +36,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.net.Socket;
@@ -42,10 +48,12 @@ public class MainActivity extends AppCompatActivity {
     private static final int IMAGE_CAMERA_CODE = 1001;
     ImageView importPic;
     Button Import,Camera,SandC;
+    TextView noti;
     private final int REQUEST_CODE=1000;
     Uri image_uri;
-//    Handler handler=new Handler();
-//    File send ;
+    String receive_mess="";
+    String host="192.168.0.6";
+
     private static final String CAMERA_IMAGE_FILE_NAME = "image.png";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +63,8 @@ public class MainActivity extends AppCompatActivity {
         Import = (Button) findViewById(R.id.Import);
         Camera = (Button) findViewById(R.id.camera);
         SandC = (Button) findViewById(R.id.check);
+        noti = (TextView) findViewById(R.id.notification);
+        noti.setTextColor(Color.BLACK);
         Drawable sendImage = importPic.getDrawable();
         Import.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -91,26 +101,59 @@ public class MainActivity extends AppCompatActivity {
                     byte[] array = bos.toByteArray();
                     SendImageClient sic = new SendImageClient();
                     sic.execute(array);
+                    if(!receive_mess.equals("")){
+                        noti.setText(receive_mess);
+                    }
+//                    Receiver r = new Receiver();
+//                    r.execute();
+
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
                 }
-
-
             }
+
         });
 
+
+    }
+    public class Receiver extends AsyncTask<Void,Void,Void>{
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            try {
+                Socket socket = new Socket(host, 5000);
+
+                ObjectInputStream ois=new ObjectInputStream(socket.getInputStream());
+                receive_mess = (String)ois.readObject();
+                noti.setText(receive_mess);
+
+                ois.close();
+
+
+                socket.close();
+
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
     }
     public class SendImageClient extends AsyncTask<byte[],Void,Void>{
         @Override
         protected Void doInBackground(byte[]... bytes) {
             try {
-                Socket socket = new Socket("192.168.0.9", 5050);
-                OutputStream out = socket.getOutputStream();
-                DataOutputStream dos=new DataOutputStream(out);
-//                dos.writeInt(bytes[0].length);
+                Socket socket = new Socket(host, 5000);
+
+                DataOutputStream dos=new DataOutputStream(socket.getOutputStream());
+                DataInputStream ois=new DataInputStream(socket.getInputStream());
                 dos.write(bytes[0],0,bytes[0].length);
+
+                dos.flush();
                 dos.close();
-                out.close();
+
+                receive_mess = ois.readLine();
+
+                ois.close();
                 socket.close();
 
             } catch (IOException e) {
@@ -118,9 +161,8 @@ public class MainActivity extends AppCompatActivity {
             }
             return null;
         }
-
-
     }
+
     private void openCamera(){
         ContentValues values = new ContentValues();
         values.put(MediaStore.Images.Media.TITLE,"New Picture");
@@ -152,45 +194,16 @@ public class MainActivity extends AppCompatActivity {
             if(requestCode==REQUEST_CODE){
                 importPic.setImageURI(data.getData());
                 image_uri = data.getData();
-//                send.getAbsoluteFile(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+
 
             }
             else if(requestCode==IMAGE_CAMERA_CODE){
                 importPic.setImageURI(image_uri);
-//                send=createEmptyImageTempFile(getApplicationContext());
+
             }
 
 
         }
     }
-//    private static File createEmptyImageTempFile(Context context) {
-//        File f = new File(context.getFilesDir(), CAMERA_IMAGE_FILE_NAME);
-//        f.delete();
-//        FileOutputStream fos = null;
-//        try {
-//            fos = context.openFileOutput(CAMERA_IMAGE_FILE_NAME,
-//                    Context.MODE_WORLD_WRITEABLE);
-//        } catch (FileNotFoundException e) {
-//            e.printStackTrace();
-//        } finally {
-//            if (fos != null) {
-//                try {
-//                    fos.close();
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        }
-//
-//        return getImageTempFile(context);
-//    }
-//    /**
-//     * Creates a temp file for the images captured with camera.
-//     *
-//     * @param context context.
-//     * @return the temp file.
-//     */
-//    public static File getImageTempFile(Context context) {
-//        return new File(context.getFilesDir(), "image.png");
-//    }
+
 }

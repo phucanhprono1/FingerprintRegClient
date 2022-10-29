@@ -11,20 +11,22 @@
         android:id="@+id/imageView"
         android:layout_width="136dp"
         android:layout_height="156dp"
+        android:layout_marginLeft="140dp"
         android:layout_marginTop="124dp"
-        android:layout_marginLeft="110dp"
         app:srcCompat="@drawable/ic_launcher_background" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        >
+        android:layout_marginTop="30dp">
+
         <Button
             android:id="@+id/camera"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Camera"
+
             android:layout_marginLeft="60dp"
+            android:text="Camera"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/imageView" />
@@ -34,8 +36,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
 
-            android:layout_marginTop="12dp"
-            android:layout_marginLeft="40dp"
+            android:layout_marginLeft="100dp"
             android:text="Import" />
 
 
@@ -46,7 +47,16 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
+        android:layout_marginTop="30dp"
         android:text="Scan and Check" />
+
+
+    <TextView
+        android:id="@+id/notification"
+
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Checking for notifications" />
 
 
 </LinearLayout>
