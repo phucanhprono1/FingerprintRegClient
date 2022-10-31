@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -53,8 +54,10 @@ public class MainActivity extends AppCompatActivity {
     Uri image_uri;
     String receive_mess="";
     String host="192.168.0.6";
-
+    InputStream imgstream=null;
+    byte[] array;
     private static final String CAMERA_IMAGE_FILE_NAME = "image.png";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -88,56 +91,78 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+
+
+
+
+
         SandC.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
                 try {
-                    final InputStream imgstream = getContentResolver().openInputStream(image_uri);
+                    imgstream = getContentResolver().openInputStream(image_uri);
                     final Bitmap selectedImage = BitmapFactory.decodeStream(imgstream);
                     importPic.setImageBitmap(selectedImage);
                     ByteArrayOutputStream bos = new ByteArrayOutputStream();
                     selectedImage.compress(Bitmap.CompressFormat.PNG,0,bos);
-                    byte[] array = bos.toByteArray();
-                    SendImageClient sic = new SendImageClient();
-                    sic.execute(array);
-                    if(!receive_mess.equals("")){
-                        noti.setText(receive_mess);
-                    }
-//                    Receiver r = new Receiver();
-//                    r.execute();
-
+                    array = bos.toByteArray();
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
                 }
+//                try {
+//                    final InputStream imgstream = getContentResolver().openInputStream(image_uri);
+//                    final Bitmap selectedImage = BitmapFactory.decodeStream(imgstream);
+//                    importPic.setImageBitmap(selectedImage);
+//                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+//                    selectedImage.compress(Bitmap.CompressFormat.PNG,0,bos);
+//                    byte[] array = bos.toByteArray();
+//                    SendImageClient sic = new SendImageClient();
+//                    sic.execute(array);
+//                    if(!receive_mess.equals("")){
+//                        noti.setText(receive_mess);
+//                    }
+////                    Receiver r = new Receiver();
+////                    r.execute();
+//
+//                } catch (FileNotFoundException e) {
+//                    e.printStackTrace();
+
+                Thread thread =new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Socket socket= new Socket(host, 5000);
+
+
+                            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+                            BufferedReader in  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                            dos.write(array, 0, array.length);
+                            dos.close();
+                            while (receive_mess.isEmpty()) {
+                                receive_mess = in.readLine();
+                            }
+
+                            noti.setText(receive_mess);
+
+                            socket.close();
+
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+
+
+                    }
+                });
+
+                thread.start();
+
             }
 
         });
 
 
     }
-    public class Receiver extends AsyncTask<Void,Void,Void>{
 
-        @Override
-        protected Void doInBackground(Void... voids) {
-            try {
-                Socket socket = new Socket(host, 5000);
-
-                ObjectInputStream ois=new ObjectInputStream(socket.getInputStream());
-                receive_mess = (String)ois.readObject();
-                noti.setText(receive_mess);
-
-                ois.close();
-
-
-                socket.close();
-
-            } catch (IOException | ClassNotFoundException e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
-    }
     public class SendImageClient extends AsyncTask<byte[],Void,Void>{
         @Override
         protected Void doInBackground(byte[]... bytes) {
