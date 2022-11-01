@@ -14,6 +14,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.media.Image;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -41,7 +42,9 @@ import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Base64;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -55,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
     String receive_mess="";
     String host="192.168.0.6";
     InputStream imgstream=null;
+    String encodedString;
     byte[] array;
     private static final String CAMERA_IMAGE_FILE_NAME = "image.png";
 
@@ -106,50 +110,43 @@ public class MainActivity extends AppCompatActivity {
                     ByteArrayOutputStream bos = new ByteArrayOutputStream();
                     selectedImage.compress(Bitmap.CompressFormat.PNG,0,bos);
                     array = bos.toByteArray();
+                    encodedString = Base64.getEncoder().encodeToString(array);
+
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
                 }
-//                try {
-//                    final InputStream imgstream = getContentResolver().openInputStream(image_uri);
-//                    final Bitmap selectedImage = BitmapFactory.decodeStream(imgstream);
-//                    importPic.setImageBitmap(selectedImage);
-//                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
-//                    selectedImage.compress(Bitmap.CompressFormat.PNG,0,bos);
-//                    byte[] array = bos.toByteArray();
-//                    SendImageClient sic = new SendImageClient();
-//                    sic.execute(array);
-//                    if(!receive_mess.equals("")){
-//                        noti.setText(receive_mess);
-//                    }
-////                    Receiver r = new Receiver();
-////                    r.execute();
-//
-//                } catch (FileNotFoundException e) {
-//                    e.printStackTrace();
 
                 Thread thread =new Thread(new Runnable() {
                     @Override
                     public void run() {
                         try {
                             Socket socket= new Socket(host, 5000);
-
-
                             DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
-                            BufferedReader in  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                            dos.write(array, 0, array.length);
+                            dos.write(array,0,array.length);
                             dos.close();
-                            while (receive_mess.isEmpty()) {
-                                receive_mess = in.readLine();
-                            }
-
-                            noti.setText(receive_mess);
-
                             socket.close();
 
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
+                        try {
+                            ServerSocket server = new ServerSocket(6000);
 
+                            while(true){
+                                Socket socket= server.accept();
+                                noti.setText("Waiting for response");
+                                BufferedReader in  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                                receive_mess = in.readLine();
+                                System.out.println(receive_mess);
+                                noti.setText(receive_mess);
+                                in.close();
+                                socket.close();
+                                server.close();
+                            }
+
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
 
                     }
                 });
@@ -163,30 +160,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public class SendImageClient extends AsyncTask<byte[],Void,Void>{
-        @Override
-        protected Void doInBackground(byte[]... bytes) {
-            try {
-                Socket socket = new Socket(host, 5000);
 
-                DataOutputStream dos=new DataOutputStream(socket.getOutputStream());
-                DataInputStream ois=new DataInputStream(socket.getInputStream());
-                dos.write(bytes[0],0,bytes[0].length);
-
-                dos.flush();
-                dos.close();
-
-                receive_mess = ois.readLine();
-
-                ois.close();
-                socket.close();
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
-    }
 
     private void openCamera(){
         ContentValues values = new ContentValues();
